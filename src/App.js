@@ -103,6 +103,8 @@ export default function WarehouseApp() {
   const [showReqForm, setShowReqForm] = useState(null);
   const [reqForm, setReqForm] = useState({ type: "increase", amount: "" });
   const [historyFilter, setHistoryFilter] = useState("sve");
+  const [confirm, setConfirm] = useState(null); // { message, onYes }
+  const askConfirm = (message, onYes) => setConfirm({ message, onYes });
 
   useEffect(() => { const on = () => setOnline(true); const off = () => setOnline(false); window.addEventListener("online", on); window.addEventListener("offline", off); return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); }; }, []);
 
@@ -147,11 +149,18 @@ export default function WarehouseApp() {
     }
     setData(updated); save(updated); setShowItemForm(false);
   };
+  const confirmAndSubmitItem = () => {
+    if (!itemForm.name || itemForm.quantity === "") return;
+    const msg = editItem ? `Izmeni artikal "${itemForm.name}"?` : `Dodaj novi artikal "${itemForm.name}"?`;
+    askConfirm(msg, submitItemForm);
+  };
   const deleteItem = (id) => {
     const item = items.find(i => i.id === id);
-    let updated = { ...data, items: items.filter(i => i.id !== id) };
-    updated = addHistory("item_delete", `"${item?.name}" obrisan`, updated);
-    setData(updated); save(updated); setExpandedItem(null); notify("Artikal obrisan", "error");
+    askConfirm(`Obriši artikal "${item?.name}"?`, () => {
+      let updated = { ...data, items: items.filter(i => i.id !== id) };
+      updated = addHistory("item_delete", `"${item?.name}" obrisan`, updated);
+      setData(updated); save(updated); setExpandedItem(null); notify("Artikal obrisan", "error");
+    });
   };
   const adjustQty = (id, delta) => {
     const item = items.find(i => i.id === id);
@@ -196,12 +205,19 @@ export default function WarehouseApp() {
     else { updated.categories = [...categories, { id: generateId(), ...catForm }]; updated = addHistory("cat_add", `Kategorija "${catForm.name}" dodana`, updated); notify("Kategorija dodana ✓"); }
     setData(updated); save(updated); setShowCatForm(false);
   };
+  const confirmAndSubmitCat = () => {
+    if (!catForm.name) return;
+    const msg = editCat ? `Izmeni kategoriju "${catForm.name}"?` : `Dodaj novu kategoriju "${catForm.name}"?`;
+    askConfirm(msg, submitCatForm);
+  };
   const deleteCat = (id) => {
     if (items.some(i => i.categoryId === id)) { notify("Kategorija ima artikle — prvo ih premesti!", "error"); return; }
     const cat = categories.find(c => c.id === id);
-    let updated = { ...data, categories: categories.filter(c => c.id !== id) };
-    updated = addHistory("cat_delete", `Kategorija "${cat?.name}" obrisana`, updated);
-    setData(updated); save(updated); notify("Kategorija obrisana", "error");
+    askConfirm(`Obriši kategoriju "${cat?.name}"?`, () => {
+      let updated = { ...data, categories: categories.filter(c => c.id !== id) };
+      updated = addHistory("cat_delete", `Kategorija "${cat?.name}" obrisana`, updated);
+      setData(updated); save(updated); notify("Kategorija obrisana", "error");
+    });
   };
 
   // ── Users ──
@@ -652,7 +668,7 @@ export default function WarehouseApp() {
             </div>
             <div style={{ marginBottom:22 }}><label className="fl">MIN. ZALIHA</label><input className="fi" type="number" min="0" inputMode="numeric" value={itemForm.minStock} onChange={e=>setItemForm({...itemForm,minStock:e.target.value})} placeholder="0"/></div>
             <div style={{ display:"flex",gap:10 }}>
-              <button onClick={submitItemForm} style={{ flex:1,background:"#4fc3f7",color:"#0a0e1a",border:"none",padding:"14px",borderRadius:10,fontWeight:700,fontSize:14,cursor:"pointer" }}>{editItem?"✓ SAČUVAJ":"+ DODAJ"}</button>
+              <button onClick={confirmAndSubmitItem} style={{ flex:1,background:"#4fc3f7",color:"#0a0e1a",border:"none",padding:"14px",borderRadius:10,fontWeight:700,fontSize:14,cursor:"pointer" }}>{editItem?"✓ SAČUVAJ":"+ DODAJ"}</button>
               <button onClick={()=>setShowItemForm(false)} style={{ background:"rgba(255,68,68,.1)",border:"1px solid rgba(255,68,68,.25)",color:"#ff6666",padding:"14px 18px",borderRadius:10,cursor:"pointer",fontSize:16 }}>✕</button>
             </div>
           </div>
@@ -685,7 +701,7 @@ export default function WarehouseApp() {
             <div style={{ marginBottom:14 }}><label className="fl">NAZIV *</label><input className="fi" value={catForm.name} onChange={e=>setCatForm({...catForm,name:e.target.value})} placeholder="npr. Rezervni delovi"/></div>
             <div style={{ marginBottom:14 }}><label className="fl">BOJA</label><div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>{CAT_COLORS.map(c=><div key={c} className={`csw ${catForm.color===c?"sel":""}`} style={{ background:c }} onClick={()=>setCatForm({...catForm,color:c})}/>)}</div></div>
             <div style={{ marginBottom:22 }}><label className="fl">IKONICA</label><div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>{CAT_ICONS.map(ic=><button key={ic} className={`ibtn ${catForm.icon===ic?"sel":""}`} onClick={()=>setCatForm({...catForm,icon:ic})}>{ic}</button>)}</div></div>
-            <div style={{ display:"flex",gap:10 }}><button onClick={submitCatForm} style={{ flex:1,background:"#4fc3f7",color:"#0a0e1a",border:"none",padding:"14px",borderRadius:10,fontWeight:700,fontSize:14,cursor:"pointer" }}>{editCat?"✓ SAČUVAJ":"+ DODAJ"}</button><button onClick={()=>setShowCatForm(false)} style={{ background:"rgba(255,68,68,.1)",border:"1px solid rgba(255,68,68,.25)",color:"#ff6666",padding:"14px 18px",borderRadius:10,cursor:"pointer",fontSize:16 }}>✕</button></div>
+            <div style={{ display:"flex",gap:10 }}><button onClick={confirmAndSubmitCat} style={{ flex:1,background:"#4fc3f7",color:"#0a0e1a",border:"none",padding:"14px",borderRadius:10,fontWeight:700,fontSize:14,cursor:"pointer" }}>{editCat?"✓ SAČUVAJ":"+ DODAJ"}</button><button onClick={()=>setShowCatForm(false)} style={{ background:"rgba(255,68,68,.1)",border:"1px solid rgba(255,68,68,.25)",color:"#ff6666",padding:"14px 18px",borderRadius:10,cursor:"pointer",fontSize:16 }}>✕</button></div>
           </div>
         </div>
       )}
@@ -707,6 +723,21 @@ export default function WarehouseApp() {
               </div>
             </div>
             <div style={{ display:"flex",gap:10 }}><button onClick={submitUserForm} style={{ flex:1,background:"#FFD700",color:"#0a0e1a",border:"none",padding:"14px",borderRadius:10,fontWeight:700,fontSize:14,cursor:"pointer" }}>{editUser?"✓ SAČUVAJ":"+ DODAJ"}</button><button onClick={()=>setShowUserForm(false)} style={{ background:"rgba(255,68,68,.1)",border:"1px solid rgba(255,68,68,.25)",color:"#ff6666",padding:"14px 18px",borderRadius:10,cursor:"pointer",fontSize:16 }}>✕</button></div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════ CONFIRM DIALOG ══════ */}
+      {confirm && (
+        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.88)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(8px)",padding:20 }}>
+          <div style={{ background:"#0d1526",border:"1px solid #2a4a7a",borderRadius:20,padding:"32px 28px",maxWidth:340,width:"100%",textAlign:"center",animation:"popIn .25s ease",boxShadow:"0 24px 64px rgba(0,0,0,.7)" }}>
+            <div style={{ fontSize:36,marginBottom:16 }}>❓</div>
+            <div style={{ fontSize:10,letterSpacing:3,color:"#4fc3f7",marginBottom:10 }}>POTVRDA</div>
+            <div style={{ fontSize:16,color:"#c8ddf0",fontWeight:600,lineHeight:1.5,marginBottom:28 }}>{confirm.message}</div>
+            <div style={{ display:"flex",gap:12 }}>
+              <button onClick={() => { confirm.onYes(); setConfirm(null); }} style={{ flex:1,background:"#00e676",color:"#0a0e1a",border:"none",padding:"14px",borderRadius:12,fontWeight:700,fontSize:15,cursor:"pointer",fontFamily:"inherit" }}>✓ DA</button>
+              <button onClick={() => setConfirm(null)} style={{ flex:1,background:"rgba(255,68,68,.12)",border:"1px solid rgba(255,68,68,.3)",color:"#ff6666",padding:"14px",borderRadius:12,fontWeight:700,fontSize:15,cursor:"pointer",fontFamily:"inherit" }}>✕ NE</button>
+            </div>
           </div>
         </div>
       )}
